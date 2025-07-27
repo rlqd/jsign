@@ -6,7 +6,6 @@ export interface Message {
 }
 
 const utf8Encoder = new TextEncoder();
-const asciiDecoder = new TextDecoder('ascii');
 
 function getAsciiBytes(data: string) {
     const buf = new Uint8Array(data.length);
@@ -62,10 +61,13 @@ export async function sign(key: string|CryptoKey, payload: any, algorithm?: stri
         key,
         utf8Encoder.encode(`${payloadStr}|${timestamp}`),
     );
+    const signatureStr = typeof Buffer !== 'undefined'
+        ? Buffer.from(signature).toString('base64')
+        : btoa(String.fromCharCode(...new Uint8Array(signature)));
     return {
         payload: payloadStr,
         timestamp,
-        signature: btoa(asciiDecoder.decode(signature)),
+        signature: signatureStr,
     };
 }
 
@@ -86,10 +88,13 @@ export async function verify<T = any>(key: string|CryptoKey, message: Message, m
     if (messageTtl > 0 && (Date.now() - message.timestamp) > messageTtl) {
         throw new Error('Message timestamp expired');
     }
+    const signature = typeof Buffer !== 'undefined'
+        ? Buffer.from(message.signature, 'base64')
+        : getAsciiBytes(atob(message.signature));
     const isValid = await crypto.subtle.verify(
         { name: 'HMAC' },
         key,
-        getAsciiBytes(atob(message.signature)),
+        signature,
         utf8Encoder.encode(`${message.payload}|${message.timestamp}`),
     );
     if (!isValid) {

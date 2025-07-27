@@ -1,8 +1,21 @@
-import { describe, it } from 'node:test';
+import { describe, it, before, after } from 'node:test';
 import * as assert from 'node:assert/strict';
 import * as jsign from '../src';
 
-describe('jsign', () => {
+const BufferOrig = Buffer;
+for (const mode of ['Buffer', 'Web']) {
+
+describe(`jsign (${mode})`, () => {
+
+    before(() => {
+        if (mode === 'Web') {
+            Buffer = undefined as any;
+        }
+    });
+
+    after(() => {
+        Buffer = BufferOrig;
+    });
 
     it('generateKey(): creates key with default algorithm', async () => {
         const key = await jsign.generateKey();
@@ -142,3 +155,5 @@ describe('jsign', () => {
         }
     });
 });
+
+}
